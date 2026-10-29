@@ -170,18 +170,18 @@ The mitigation strategy follows a defense-in-depth approach.
 
 // ## 6. Repository Structure
 
-// ```text
-// domopi-security-hardening/
-//├── README.md
-// ├── docs/
-// │   ├── 01-initial-assessment.md
-// │   ├── 02-environment-setup.md
-// │   ├── 03-mitigations.md
-// │   └── 04-validation.md
-// ├── docker/
-// ├── screenshots/
-// └── .gitignore
-// ``` 
+/* ```text
+/* domopi-security-hardening/
+/*├── README.md
+/* ├── docs/
+/* │   ├── 01-initial-assessment.md
+/* │   ├── 02-environment-setup.md
+/* │   ├── 03-mitigations.md
+/* │   └── 04-validation.md
+/* ├── docker/
+/* ├── screenshots/
+/* └── .gitignore
+/* ``` 
 
 
 ## 6. Disclaimer
