@@ -168,7 +168,7 @@ The mitigation strategy follows a defense-in-depth approach.
 - Evaluate whether exploitation impact has been reduced.
 - Ensure legitimate application functionality remains available.
 
-// ## 6. Repository Structure
+/* ## 6. Repository Structure
 
 /* ```text
 /* domopi-security-hardening/
