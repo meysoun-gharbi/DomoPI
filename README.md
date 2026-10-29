@@ -143,7 +143,7 @@ ps -ww -p 524,525 -o pid,ppid,user,args
 
 ## 5. Security Hardening Strategy
 
-The planned mitigation strategy follows a defense-in-depth approach.
+The mitigation strategy follows a defense-in-depth approach.
 
 **Phase 1 — Security Assessment**
 - Identify exposed services and attack surfaces.
@@ -168,24 +168,23 @@ The planned mitigation strategy follows a defense-in-depth approach.
 - Evaluate whether exploitation impact has been reduced.
 - Ensure legitimate application functionality remains available.
 
-## 6. Repository Structure
+// ## 6. Repository Structure
 
-```text
-domopi-security-hardening/
-├── README.md
-├── docs/
-│   ├── 01-initial-assessment.md
-│   ├── 02-environment-setup.md
-│   ├── 03-mitigations.md
-│   └── 04-validation.md
-├── docker/
-├── screenshots/
-└── .gitignore
-```
+// ```text
+// domopi-security-hardening/
+//├── README.md
+// ├── docs/
+// │   ├── 01-initial-assessment.md
+// │   ├── 02-environment-setup.md
+// │   ├── 03-mitigations.md
+// │   └── 04-validation.md
+// ├── docker/
+// ├── screenshots/
+// └── .gitignore
+// ``` 
 
-Documentation and implementation files will be added progressively as the project advances.
 
-## 7. Disclaimer
+## 6. Disclaimer
 
 This project is conducted in an **isolated, authorized educational laboratory** using an intentionally vulnerable system.
 
