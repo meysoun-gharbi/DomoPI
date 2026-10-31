@@ -14,6 +14,7 @@ Two main security countermeasures were implemented:
 2. **Secure OTA Updates** — authenticating and verifying application updates using Ed25519 digital signatures and SHA-256 integrity checks.
 
 Additional host security improvements include SSH hardening, Lynis auditing, AIDE file integrity monitoring, and disabling unnecessary vulnerable services.
+A third countermeasure, network hardening using `nftables`/`iptables`, was investigated but could not be implemented due to missing netfilter capabilities in the customized Linux kernel. Alternative network security mitigations are proposed as future work.
 
 ## Technical Environment
 
@@ -115,13 +116,50 @@ Host-level improvements were implemented alongside the two main countermeasures.
 | Backdoor service | Disabled |
 | Original DSVW service | Replaced by hardened Docker deployment |
 
+
+## Countermeasure 3 — Network Hardening (Not Implemented — Kernel Limitations)
+### Objective
+
+The network hardening countermeasure was initially considered to reduce the network attack surface of DomoPi by restricting inbound connections and controlling access to exposed services.
+
+The proposed implementation involved Linux firewall technologies, particularly `nftables` and `iptables`, to enforce network filtering rules.
+
+### Identified Technical Constraint
+
+DomoPi relies on a customized Linux kernel (`4.19.118-v8+`) that must be preserved as part of the laboratory environment.
+
+During the implementation phase, the kernel was found to lack the necessary netfilter-related capabilities for the intended firewall configuration. Consequently, neither `nftables` nor `iptables` could be used to enforce the planned filtering rules.
+
+The same kernel limitations also prevented standard Docker bridge networking, requiring the hardened application container to operate in `host` network mode.
+
+### Proposed Security Mitigations
+
+The following mitigations are recommended but have not been implemented or validated as part of this project:
+
+| Proposed mitigation | Security objective |
+|---|---|
+| Default-deny inbound firewall policy | Block unauthorized incoming connections |
+| Restrict SSH access to trusted administration hosts | Reduce remote administrative exposure |
+| Allowlist application traffic on TCP port `65413` | Limit access to the DSVW application |
+| Block unused and unnecessary network ports | Reduce the exposed attack surface |
+| Network segmentation using an external firewall or VLAN | Isolate the Raspberry Pi from untrusted networks |
+| Network traffic monitoring and alerting | Detect suspicious connections and scanning activity |
+
+### Implementation Status
+
+**Status: Not implemented — blocked by customized kernel limitations.**
+
+No functional `nftables` or `iptables` firewall rules were deployed. The proposed network mitigations remain recommendations for future work.
+
+A potential improvement would be to implement network filtering on an external gateway or firewall, without modifying the Raspberry Pi kernel.
+
 ## Technical Limitations
 
 The original customized kernel lacks several networking capabilities required for standard Docker bridge networking and netfilter-based firewall rules.
 
 As a result:
 
-- `nftables` could not be deployed.
+- Neither `nftables` nor `iptables` could be deployed due to missing netfilter-related kernel capabilities.
 - Docker operates using host networking rather than isolated bridge networking.
 - The OTA mechanism updates the application container, not the kernel or firmware.
 - Automatic rollback is implemented but still requires dedicated failure-recovery testing.
@@ -140,7 +178,7 @@ DomoPI/
 │   ├── initial-assessment.md
 │   ├── docker-hardening.md
 │   ├── secure-ota.md
-│   └── host-hardening.md
+│   └── security-limitations.md
 ├── evidence/
 │   ├── docker/
 │   ├── ota/
