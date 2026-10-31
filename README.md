@@ -16,6 +16,10 @@ Two main security countermeasures were implemented:
 Additional host security improvements include SSH hardening, Lynis auditing, AIDE file integrity monitoring, and disabling unnecessary vulnerable services.
 A third countermeasure, network hardening using `nftables`/`iptables`, was investigated but could not be implemented due to missing netfilter capabilities in the customized Linux kernel. Alternative network security mitigations are proposed as future work.
 
+## Security Architecture
+
+![DomoPI Security Architecture](images/domopi-architecture.png)
+
 ## Technical Environment
 
 | Component | Technology |
