@@ -53,7 +53,7 @@ Security restrictions include:
 - Read-only root filesystem.
 - Restricted temporary storage.
 - Memory and process limits.
-- Localhost-only application binding.
+- Application accessible on 127.0.0.1:65413 during validation.
 
 **Validation:** the hardened container remained operational and returned `HTTP 200` on `127.0.0.1:65413`.
 
@@ -131,7 +131,7 @@ These constraints were retained and documented to preserve the original embedded
 ## Repository Structure
 
 ```text
-domopi-security-hardening/
+DomoPI/
 ├── README.md
 ├── docker/
 ├── ota/

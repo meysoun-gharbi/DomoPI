@@ -1,0 +1,22 @@
+FROM python:3.11-slim-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends dnsutils \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir lxml
+
+LABEL org.opencontainers.image.version="2.0.0"
+WORKDIR /app
+
+COPY dsvw.py /app/dsvw.py
+
+RUN sed -i 's/"raspberrypi.local", 65412/"127.0.0.1", 65413/' /app/dsvw.py \
+    && useradd --system --uid 10001 --no-create-home dsvw \
+    && chown -R dsvw:dsvw /app
+
+USER 10001:10001
+
+EXPOSE 65413
+
+CMD ["python3", "/app/dsvw.py"]
+

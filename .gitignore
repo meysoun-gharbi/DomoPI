@@ -1,0 +1,32 @@
+# Secrets
+*private*.pem
+*.key
+id_rsa
+id_ed25519
+.env
+.env.*
+
+# Large images and archives
+*.img
+*.img.gz
+*.tar
+*.tar.gz
+*.qcow2
+
+# Sensitive runtime data
+state/
+backups/
+staging.*/
+deploy.lock
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# Raw Docker inspection
+/evidence/docker/docker-inspect.json

@@ -1,0 +1,4 @@
+version=2.0.0
+image=domopi-dsvw:v2
+archive=dsvw-v2.tar
+sha256=76b9d42af2d89ce686fafae802b7e3580919f28c8b37acfedbf9a809864f23b8

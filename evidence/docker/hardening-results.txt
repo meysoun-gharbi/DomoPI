@@ -1,0 +1,10 @@
+Container: /dsvw-v2
+Status: running
+User: 10001:10001
+Privileged: False
+Read-only filesystem: True
+Capabilities dropped: ['ALL']
+Security options: ['no-new-privileges:true']
+Network: host
+Memory limit: 128 MiB
+PID limit: 64
